@@ -1,21 +1,34 @@
-import React, {  } from 'react';
+import React from 'react';
 import ReactDOM from 'react-dom';
+import { createStore, bindActionCreators } from 'redux';
+import { connect, Provider } from 'react-redux';
+import { reducer } from './redux/reducer.js';
 import './index.css';
 import {getSquareRoot, performOperation} from './additFunctions.js';
+import {
+  setValue,
+  setSecondValue,
+  setOperator,
+  setFloat,
+  setNegative,
+  setOperatorEntered,
+  setResultDisplayed,
+} from './redux/actionCreators.js';
 //import { throwStatement, forInStatement } from '@babel/types';
+
+const store = createStore(reducer);
 
 class Calculator extends React.Component {
     constructor(props) {
         super(props);
-        this.state = {
-            value: "0",
-            secondValue: "",
-            operator: "",
-            float: false,
-            negative: false,
-            operatorEntered: false,
-            resultDisplayed: false,
-        };
+
+        this.setValue = this.props.setValue;
+        this.setSecondValue = this.props.setSecondValue;
+        this.setOperator = this.props.setOperator;
+        this.setFloat = this.props.setFloat;
+        this.setNegative = this.props.setNegative;
+        this.setOperatorEntered = this.props.setOperatorEntered;
+        this.setResultDisplayed = this.props.setResultDisplayed;
 
         this.handleMouseDown = this.handleMouseDown.bind(this);
         this.handleMouseUp = this.handleMouseUp.bind(this);
@@ -63,152 +76,124 @@ class Calculator extends React.Component {
     }
 
     handleValue(event) {
-        const target = event.target;
-        const attributesObj = target.attributes;
+      const target = event.target;
+      const attributesObj = target.attributes;
 
-        if (attributesObj.hasOwnProperty("data-value")) {
+      if (attributesObj.hasOwnProperty("data-value")) {
+        if (this.props.value.length >= 15) {
+            return;
+        };
 
-            if (this.state.value.length >= 15) {
-                return;
-            };
+		const dataValue = attributesObj["data-value"]["value"];
 
-            const dataValue = attributesObj["data-value"]["value"];
+        if (this.props.operatorEntered || this.props.resultDisplayed) {
+          this.setValue("0");
+          this.setOperatorEntered(false);
+          this.setResultDisplayed(false);
+          this.setFloat(false);
+          this.setNegative(false);
+        };
 
-            if (this.state.operatorEntered || this.state.resultDisplayed) {
-                this.setState({
-                    value: "0",
-                    operatorEntered: false,
-                    resultDisplayed: false,
-                    float: false,
-                    negative: false
-                });
-            }
-
-            if (dataValue === "." && this.state.float === false) {
-                this.setState((state) => {
-                    if (state.value === "-") {
-                        return {
-                            value: "-0.",
-                            float: true,
-                        };
-                    }
-                    return {
-                        value: state.value + dataValue,
-                        float: true,
-                    };
-                });
-            } else if (dataValue === "." && this.state.float === true) {
-                return;
-            } else if (dataValue === "-+" && this.state.negative === false) {
-                if (this.state.value === "0") {
-                    this.setState((state) => ({
-                        value: "-",
-                        negative: true,
-                    }));
-                } else {
-                    this.setState((state) => ({
-                        value: "-" + state.value,
-                        negative: true,
-                    }));
-                }
-            } else if(dataValue === "-+" && this.state.negative === true) {
-                this.setState((state) => ({
-                    value: state.value.slice(1),
-                    negative: false,
-                }));
-            } else if (this.state.value === "0") {
-                this.setState({value: dataValue});
+        if (dataValue === "." && this.props.float === false) {
+          if (this.props.value === "-") {
+            this.setValue("-0.");
+            this.setFloat(true);
+          } else {
+            this.setValue(this.props.value + dataValue);
+            this.setFloat(true);
+          }
+        } else if (dataValue === "." && this.props.float === true) {
+            return;
+        } else if (dataValue === "-+" && this.props.negative === false) {
+            if (this.props.value === "0") {
+              this.setValue("-");
+              this.setNegative(true);
             } else {
-                if (this.state.value === "-0") {
-                    this.setState((state) => ({value: "-" + dataValue}));
-                } else {
-                    if (this.state.operatorEntered || this.state.resultDisplayed) {
-                        this.setState((state) => ({value: "" + dataValue}));
-                    } else {
-                        this.setState((state) => ({value: state.value + dataValue}));
-                    }
-                }
+              this.setValue("-" + this.props.value);
+              this.setNegative(true);
             }
-        } else if (attributesObj.hasOwnProperty("data-operator")) {
-            const dataOperator = attributesObj["data-operator"]["value"];
-
-            if (dataOperator === "c") {
-                this.setState({
-                    value: "0",
-                    secondValue: "",
-                    operator: "",
-                    float: false,
-                    negative: false,
-                    operatorEntered: false,
-                    resultDisplayed: false,
-                });
-            } else if (dataOperator === "backspace") {
-                if (this.state.value === "0") {
-                    return;
-                } else if (this.state.value === "-" || this.state.value.length === 1 ) {
-                    this.setState({
-                        value: "0",
-                        float: false,
-                        negative: false,
-                    });
-                } else if (this.state.value[this.state.value.length - 1] === ".") {
-                    this.setState((state) => ({
-                        value: state.value.slice(0, -1),
-                        float: false,
-                    }));
-                } else {
-                    this.setState((state) => ({value: state.value.slice(0, -1)}));
-                }
-            } else if (dataOperator === "=") {
-                if (this.state.operator === "") {
-                    return;
-                } else {
-                    const result = performOperation(this.state.value, this.state.secondValue, this.state.operator);
-
-                    this.setState((state) => ({
-                        value: "" + result,
-                        secondValue: "",
-                        operator: "",
-                        float: false,
-                        negative: false,
-                        operatorEntered: false,
-                        resultDisplayed: true,
-                    }));
-                }
-            } else if (dataOperator === "sqrt") {
-                this.setState((state) => ({
-                    value: "" + getSquareRoot(state.value),
-                    operator: "",
-                    operatorEntered: false,
-                    float: false,
-                    negative: false,
-                    resultDisplayed: true,
-                }));
+        } else if(dataValue === "-+" && this.props.negative === true) {
+          this.setValue(this.props.value.slice(1));
+          this.setNegative(false);
+        } else if (this.props.value === "0") {
+          this.setValue(dataValue);
+        } else {
+            if (this.props.value === "-0") {
+                this.setValue("-" + dataValue);
             } else {
-                if (this.state.secondValue !== "") {
-                    let result = performOperation(this.state.value, this.state.secondValue, this.state.operator);
-
-                    this.setState((state) => ({
-                        value: "" + result,
-                        secondValue: "" + result,
-                        operator: dataOperator,
-                        float: false,
-                        negative: false,
-                        operatorEntered: true,
-                        resultDisplayed: false,
-                    }));
+                if (this.props.operatorEntered || this.props.resultDisplayed) {
+                    this.setValue("" + dataValue);
                 } else {
-                    this.setState((state) => ({
-                        secondValue: state.value,
-                        value: "0",
-                        operator: dataOperator,
-                        operatorEntered: true,
-                        float: false,
-                        negative: false,
-                    }));
+                    this.setValue(this.props.value + dataValue);
                 }
             }
         }
+      } else if (attributesObj.hasOwnProperty("data-operator")) {
+          const dataOperator = attributesObj["data-operator"]["value"];
+
+          if (dataOperator === "c") {
+            this.setValue("0");
+            this.setSecondValue("");
+            this.setOperator("");
+            this.setFloat(false);
+            this.setNegative(false);
+            this.setOperatorEntered(false);
+            this.setResultDisplayed(false);
+          } else if (dataOperator === "backspace") {
+              if (this.props.value === "0") {
+                  return;
+              } else if (this.props.value === "-" || this.props.value.length === 1 ) {
+                this.setValue("0");
+                this.setFloat(false);
+                this.setNegative(false);
+              } else if (this.props.value[this.props.value.length - 1] === ".") {
+                this.setValue(this.props.value.slice(0, -1));
+                this.setFloat(false);
+              } else {
+                this.setValue(this.props.value.slice(0, -1));
+              }
+          } else if (dataOperator === "=") {
+              if (this.props.operator === "") {
+                  return;
+              } else {
+                const result = performOperation(this.props.value, this.props.secondValue, this.props.operator);
+
+                this.setValue("" + result);
+                this.setSecondValue("");
+                this.setOperator("");
+                this.setFloat(false);
+                this.setNegative(false);
+                this.setOperatorEntered(false);
+                this.setResultDisplayed(true);
+              }
+          } else if (dataOperator === "sqrt") {
+            this.setValue("" + getSquareRoot(this.props.value));
+            this.setOperator("");
+            this.setOperatorEntered(false);
+            this.setFloat(false);
+            this.setNegative(false);
+            this.setResultDisplayed(true);
+          } else {
+              if (this.props.secondValue !== "") {
+                let result = performOperation(this.props.value, this.props.secondValue, this.props.operator);
+
+                this.setValue("" + result);
+                this.setSecondValue("" + result);
+                this.setOperator(dataOperator);
+                this.setFloat(false);
+                this.setNegative(false);
+                this.setOperatorEntered(true);
+                this.setResultDisplayed(false);
+              } else {
+                this.setValue("0");
+                this.setSecondValue(this.props.value);
+                this.setOperator(dataOperator);
+                this.setOperatorEntered(true);
+                this.setFloat(false);
+                this.setNegative(false);
+              }
+          }
+      }
     }
 
     render() {
@@ -223,7 +208,7 @@ class Calculator extends React.Component {
                     </div>
                     <div className="logo">CALCULATOR</div>
                 </div>
-                <div className="display">{this.state.value}</div>
+                <div className="display">{this.props.value}</div>
                 <div className="buttons-panel" 
                     onClick={this.handleValue} 
                     onMouseDown={this.handleMouseDown}
@@ -267,4 +252,35 @@ class Calculator extends React.Component {
     }
 }
 
-ReactDOM.render(<Calculator />, document.getElementById('root'));
+const putStateToProps = (state) => {
+  return {
+    value: state.value,
+    secondValue: state.secondValue,
+    operator: state.operator,
+    float: state.float,
+    negative: state.negative,
+    operatorEntered: state.operatorEntered,
+    resultDisplayed: state.resultDisplayed,
+  };
+};
+
+const putActionsToProps = (dispatch) => {
+  return {
+    setValue: bindActionCreators(setValue, dispatch),
+    setSecondValue: bindActionCreators(setSecondValue, dispatch),
+    setOperator: bindActionCreators(setOperator, dispatch),
+    setFloat: bindActionCreators(setFloat, dispatch),
+    setNegative: bindActionCreators(setNegative, dispatch),
+    setOperatorEntered: bindActionCreators(setOperatorEntered, dispatch),
+    setResultDisplayed: bindActionCreators(setResultDisplayed, dispatch)
+  };
+};
+
+const WrappedCalculator = connect(putStateToProps, putActionsToProps)(Calculator);
+
+ReactDOM.render(
+  <Provider store={store}>
+    <WrappedCalculator />
+  </Provider>, 
+  document.getElementById('root')
+);
